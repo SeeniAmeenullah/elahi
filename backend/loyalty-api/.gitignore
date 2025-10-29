@@ -1,0 +1,34 @@
+# ------------------------------------
+# 2. JAVA / SPRING BOOT / MAVEN IGNORE
+# ------------------------------------
+# Compiled/runtime files
+/target/
+/bin/
+*.class
+
+# Maven Cache and Logs
+pom.xml.tag
+pom.xml.releaseBackup
+pom.xml.versionsBackup
+pom.xml.next
+release.properties
+dependency-reduced-pom.xml
+builddirectory/
+.classpath
+.project
+
+# Intellij and VS Code Project Files
+/.idea/
+/.settings/
+/.vscode/
+*.iml
+*.iws
+*.ipr
+
+# Temporary/Backup files
+*.log
+*.bak
+*~
+
+
+

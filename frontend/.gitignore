@@ -1,0 +1,42 @@
+# See https://help.github.com/articles/ignoring-files/ for more about ignoring files.
+
+# dependencies
+/node_modules
+
+# next.js
+/.next/
+/out/
+
+# production
+/build
+
+# debug
+npm-debug.log*
+yarn-debug.log*
+yarn-error.log*
+.pnpm-debug.log*
+
+
+# typescript
+*.tsbuildinfo
+next-env.d.ts
+
+
+/dist/
+/build/
+/npm-debug.log*
+yarn-error.log
+.env.local
+.env.development.local
+.env.test.local
+.env.production.local
+# VS Code extensions settings
+.vscode/extensions.json
+# Next.js specific
+.next/cache/
+*.js.map
+*.css.map
+.next/
+/public/hot-reload-client.js
+
+

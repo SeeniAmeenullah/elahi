@@ -1,0 +1,8 @@
+{
+    // This line tells VS Code to use Maven to find sources and dependencies
+    "java.configuration.updateBuildConfiguration": "automatic",
+    
+    // This line is CRITICAL: it enables annotation processing required by Lombok
+    "java.compile.annotation.processing.enabled": true,
+    "java.compile.nullAnalysis.mode": "automatic"
+}
