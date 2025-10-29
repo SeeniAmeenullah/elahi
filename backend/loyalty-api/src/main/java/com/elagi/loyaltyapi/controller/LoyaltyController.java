@@ -76,7 +76,12 @@ public class LoyaltyController {
     public Customer updateCustomerDetails(@PathVariable String customerId,
             @RequestBody CustomerUpdateRequest updateRequest) {
 
-       
+        // Use the raw findById(String) to ensure we can update the customer even if
+        // isDeleted isn't 0
+        // NOTE: The update *should* typically only happen on active customers, but we
+        // use the raw
+        // fetch here to allow admin-level updates if necessary, relying on the client's
+        // logic.
         Optional<Customer> optionalCustomer = customerRepository.findById(customerId);
 
         if (optionalCustomer.isEmpty() || optionalCustomer.get().getIsDeleted() == 1) {
@@ -126,7 +131,8 @@ public class LoyaltyController {
         customer.setIsDeleted(1); // Set the flag to indicate deletion
         customerRepository.save(customer);
 
-        
+        // Optional: We skip deleting ledger entries to maintain history (soft deletion
+        // philosophy).
     }
 
     // --- Points Calculation & Redemption ---

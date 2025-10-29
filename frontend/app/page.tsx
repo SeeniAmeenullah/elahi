@@ -13,7 +13,7 @@ interface NotificationState {
 }
 
 interface CustomerData {
-    id: string; // Corresponds to MySQL/Java's customerId
+    id: string; 
     name: string;
     totalPoints: number; 
     customerId?: any; 
@@ -112,8 +112,30 @@ const getPastDate = (monthsAgo: number): string => {
     // Calculate the date N months ago
     const pastDate = new Date(today.getFullYear(), today.getMonth() - monthsAgo, today.getDate());
     
+    // Fix for edge cases where going back a month lands on the wrong date
+    if (pastDate.getMonth() !== (today.getMonth() - monthsAgo + 12) % 12) {
+        pastDate.setDate(0); 
+    }
+    
+    // Function to ensure single-digit numbers have a leading zero
+    const pad = (num: number) => (num < 10 ? '0' : '') + num;
+
     // Format the date as YYYY-MM-DD for the API
-    return pastDate.toISOString().split('T')[0];
+    const year = pastDate.getFullYear();
+    const month = pad(pastDate.getMonth() + 1); // getMonth() is 0-indexed
+    const day = pad(pastDate.getDate());
+
+    return `${year}-${month}-${day}`;
+};
+
+const getTodayDate = (): string => {
+    const today = new Date();
+    const pad = (num: number) => (num < 10 ? '0' : '') + num;
+    const year = today.getFullYear();
+    const month = pad(today.getMonth() + 1);
+    const day = pad(today.getDate());
+
+    return `${year}-${month}-${day}`;
 };
 // ------------------------------------------
 
@@ -208,7 +230,7 @@ const Input: React.FC<InputProps> = ({ label, id, type = 'text', value, onChange
 );
 
 
-// --- Customer Detail Modal (Updated) ---
+// --- Customer Detail Modal (Unchanged) ---
 
 interface CustomerDetailModalProps {
     customer: CustomerData;
@@ -462,7 +484,7 @@ const CustomerList: React.FC<{ setNotification: (n: NotificationState) => void }
 
 // ------------------------------------------------------------------------------------------------
 
-// --- Full App Structure (Including all previous components for completeness) ---
+// --- Register Customer (Unchanged) ---
 
 const RegisterCustomer: React.FC<{ setNotification: (n: NotificationState) => void }> = ({ setNotification }) => {
     // FIX: Changed state keys to camelCase
@@ -471,6 +493,7 @@ const RegisterCustomer: React.FC<{ setNotification: (n: NotificationState) => vo
 
     const handleChange = (e: React.ChangeEvent<HTMLInputElement>) => {
         const { id, value } = e.target;
+        // FIX: Map input IDs to camelCase state names
         const newId = id === 'customer_id' ? 'customerId' : id === 'initial_points' ? 'initialPoints' : id;
 
         setForm(prev => ({ 
@@ -536,6 +559,7 @@ const RegisterCustomer: React.FC<{ setNotification: (n: NotificationState) => vo
     );
 };
 
+// --- Earn Points (Unchanged) ---
 const EarnPoints: React.FC<{ setNotification: (n: NotificationState) => void }> = ({ setNotification }) => {
     // FIX: Changed state keys to camelCase
     const [form, setForm] = useState({ customerId: '', amount: '' });
@@ -601,6 +625,7 @@ const EarnPoints: React.FC<{ setNotification: (n: NotificationState) => void }> 
     );
 };
 
+// --- Redeem Points (Updated with Error Fix) ---
 const RedeemPoints: React.FC<{ setNotification: (n: NotificationState) => void }> = ({ setNotification }) => {
     // FIX: Changed state keys to camelCase
     const [form, setForm] = useState({ customerId: '', pointsToRedeem: '', rewardDescription: '' });
@@ -683,6 +708,8 @@ const RedeemPoints: React.FC<{ setNotification: (n: NotificationState) => void }
     );
 };
 
+// --- View and Update Component (Updated with UI Fix and Logic) ---
+
 const ViewAndUpdate: React.FC<{ setNotification: (n: NotificationState) => void }> = ({ setNotification }) => {
     const [customerId, setCustomerId] = useState<string>('');
     const [customer, setCustomer] = useState<CustomerData | null>(null);
@@ -721,7 +748,6 @@ const ViewAndUpdate: React.FC<{ setNotification: (n: NotificationState) => void 
 
         setLoading(true);
         try {
-            // FIX: PUT body adjusted for Java/Spring Boot (only updating name)
             const updatedData: CustomerData = await apiService.fetchData(`/customers/${customerId}`, 'PUT', { name: trimmedName });
             setCustomer(updatedData);
             setNotification({ message: `Customer name updated to ${updatedData.name}.`, type: 'success', notificationKey: Date.now() });
@@ -773,7 +799,6 @@ const ViewAndUpdate: React.FC<{ setNotification: (n: NotificationState) => void 
         setPointsByTimeResult(null); 
 
         try {
-            // FIX: Use camelCase query parameters to match Java Controller
             const path = `/customers/${customerId}/points-by-time?startDate=${dateRange.startDate}&endDate=${dateRange.endDate}`;
             const data: PointsByTimeData = await apiService.fetchData(path);
             
@@ -800,14 +825,13 @@ const ViewAndUpdate: React.FC<{ setNotification: (n: NotificationState) => void 
         }
         
         // 1. Calculate the dates using the new utility function
-        const endDate = new Date().toISOString().split('T')[0]; // Today's date
-        const startDate = getPastDate(months); // Date N months ago
+        const endDate = getTodayDate(); // End date is ALWAYS today
+        const startDate = getPastDate(months); // Calculated past date 
 
         setLoading(true);
         setPointsByTimeResult(null);
 
         try {
-            // 2. Use the existing API path with calculated query params
             const path = `/customers/${customerId}/points-by-time?startDate=${startDate}&endDate=${endDate}`;
             const data: PointsByTimeData = await apiService.fetchData(path);
             
@@ -817,7 +841,7 @@ const ViewAndUpdate: React.FC<{ setNotification: (n: NotificationState) => void 
             setDateRange({ startDate, endDate }); // Set range fields for display
             
             setNotification({ 
-                message: `Last ${months} months of points fetched.`, 
+                message: `Last ${months} months of points fetched. Total: ${data.pointsEarned}.`, 
                 type: 'info',
                 notificationKey: Date.now() 
             });
@@ -994,7 +1018,7 @@ const ViewAndUpdate: React.FC<{ setNotification: (n: NotificationState) => void 
 };
 
 
-// --- Main Application Component ---
+// --- Main Application Component (Unchanged) ---
 
 const App = () => {
     const [currentPage, setCurrentPage] = useState<string>('list'); 

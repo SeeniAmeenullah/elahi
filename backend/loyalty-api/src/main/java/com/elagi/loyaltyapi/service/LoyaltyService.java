@@ -1,6 +1,5 @@
 package com.elagi.loyaltyapi.service;
 
-import com.elagi.loyaltyapi.exception.ResourceNotFoundException;
 import com.elagi.loyaltyapi.model.Customer;
 import com.elagi.loyaltyapi.model.PointsLedger;
 import com.elagi.loyaltyapi.repository.CustomerRepository;
@@ -10,68 +9,75 @@ import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Service;
 
 import java.time.LocalDateTime;
+import java.util.Optional;
+import java.util.UUID;
 
-@Service // Marks this as a Spring service component
+@Service
 public class LoyaltyService {
 
-    // Spring handles dependency injection for repositories
     @Autowired
     private CustomerRepository customerRepository;
 
     @Autowired
     private PointsLedgerRepository ledgerRepository;
 
+    // --- Core Business Logic ---
+
     /**
-     * Implements the core loyalty rule: 1 point for every full ₹50 spent.
-     * 
-     * @param purchaseAmount The purchase amount.
-     * @return The calculated points.
+     * Calculates loyalty points based on purchase amount.
+     * Earns 1 point for every full 50 currency units spent (e.g., ₹50).
      */
-    public int calculatePoints(double purchaseAmount) {
-        // Equivalent to: int(purchase_amount // 50) * 1
-        return (int) (purchaseAmount / 50) * 1;
+    public int calculatePoints(double amount) {
+        if (amount < 50.0) {
+            return 0;
+        }
+        // Use integer division to get only full multiples of 50
+        return (int) (amount / 50);
     }
 
-    /**
-     * Records a ledger entry and updates the customer's total points.
-     * 
-     * @param customerId      The ID of the customer.
-     * @param changeType      'Earn' or 'Redeem'.
-     * @param pointChange     The point change amount (positive for earn, negative
-     *                        for redeem).
-     * @param transactionId   The unique ID for the transaction.
-     * @param campaignApplied True if a campaign rule was applied.
-     * @return The updated customer object.
-     */
-    @Transactional // Ensures both the Customer update and Ledger insert are atomic (transactional)
-    public Customer recordPointsEvent(String customerId, String changeType, int pointChange, String transactionId,
-            boolean campaignApplied) {
-        // 1. Fetch the customer or throw 404
-        Customer customer = customerRepository.findById(customerId)
-                .orElseThrow(() -> new ResourceNotFoundException("Customer not found with ID: " + customerId));
+    // --- Transactional Logic ---
 
-        // 2. Update customer's total points
-        int newTotal = customer.getTotalPoints() + pointChange;
-        customer.setTotalPoints(newTotal);
+    /**
+     * Records a points change (Earn or Redeem) and updates the customer's total
+     * points.
+     */
+    @Transactional // Ensures atomicity for multiple DB operations
+    public Customer recordPointsEvent(String customerId, String changeType, int pointChange, String transactionId,
+            boolean isRedemption) {
+
+        // 1. Fetch customer (using the filtered findById for active customers)
+        Optional<Customer> optionalCustomer = customerRepository.findById(customerId);
+
+        Customer customer = optionalCustomer
+                .orElseThrow(() -> new RuntimeException("Customer not found or is deactivated during points update."));
+
+        // 2. Update the Customer's total points
+        int newTotalPoints = customer.getTotalPoints() + pointChange;
+        customer.setTotalPoints(newTotalPoints);
         Customer updatedCustomer = customerRepository.save(customer);
 
-        // 3. Record entry in the Points Ledger
+        // 3. Create a new Ledger entry
         PointsLedger ledgerEntry = new PointsLedger();
         ledgerEntry.setCustomerId(customerId);
         ledgerEntry.setChangeType(changeType);
         ledgerEntry.setPointChange(pointChange);
         ledgerEntry.setTransactionId(transactionId);
-        ledgerEntry.setCampaignApplied(campaignApplied);
+
         ledgerRepository.save(ledgerEntry);
 
         return updatedCustomer;
     }
 
+    // --- Points History Logic (CRITICAL FIX FOR DATE RANGE FUNCTIONALITY) ---
+
     /**
-     * Calculates total points earned by a customer in a period using the custom
-     * repository query.
+     * Retrieves the total points earned (changeType = 'Earn') by a customer
+     * within a specific LocalDateTime period by delegating the query to the
+     * repository.
      */
-    public int getPointsEarnedInPeriod(String customerId, LocalDateTime startDate, LocalDateTime endDate) {
-        return ledgerRepository.findTotalEarnedPointsInPeriod(customerId, startDate, endDate);
+    public int getPointsEarnedInPeriod(String customerId, LocalDateTime dtStart, LocalDateTime dtEnd) {
+        // This is the CRITICAL line: it calls the custom JPQL query defined in
+        // PointsLedgerRepository.
+        return ledgerRepository.findTotalEarnedPointsInPeriod(customerId, dtStart, dtEnd);
     }
 }
