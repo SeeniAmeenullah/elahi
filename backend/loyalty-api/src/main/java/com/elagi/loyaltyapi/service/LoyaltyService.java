@@ -62,6 +62,8 @@ public class LoyaltyService {
         ledgerEntry.setChangeType(changeType);
         ledgerEntry.setPointChange(pointChange);
         ledgerEntry.setTransactionId(transactionId);
+        // Sets to true if it is a redemption (campaign applied), false otherwise (earn)
+        ledgerEntry.setCampaignApplied(isRedemption);
 
         ledgerRepository.save(ledgerEntry);
 

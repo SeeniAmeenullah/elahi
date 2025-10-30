@@ -35,5 +35,8 @@ public class PointsLedger {
     @NotNull
     private String transactionId;
 
-    private boolean campaignApplied = false;
+    // FIX: Removed '= false' default.
+    // The value will now be set explicitly by the service layer based on the
+    // transaction type.
+    private boolean campaignApplied;
 }
